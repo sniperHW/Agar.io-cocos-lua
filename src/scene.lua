@@ -1,8 +1,10 @@
+local net = require("net")
+local ball = require("ball")
+local config = require("config")
 local M = {}
 
 local scene = {}
 scene.__index = scene
-
 
 M.visibleSize = cc.Director:getInstance():getVisibleSize()
 M.origin = cc.Director:getInstance():getVisibleOrigin()
@@ -91,13 +93,7 @@ end
 function scene:Init(drawer)
 	cclog("(%d, %d, %d, %d)", M.origin.x, M.origin.y, M.visibleSize.width, M.visibleSize.height)
 	self.drawer = drawer
-	ball = {}
-    ball.color = cc.c4f(math.random(1,100)/100,math.random(1,100)/100,math.random(1,100)/100,1)
-    --球出生在场景中心	
-    ball.pos = {x = M.width/2,y = M.width/2}
-    ball.r = 60
-    ball.dir = nil
-    self.ball = ball
+    self.balls = {}
     self.stars = {}
     for i=1,2048 do
         local star = {}
@@ -106,39 +102,30 @@ function scene:Init(drawer)
         star.r = 2
         table.insert(self.stars,star)           
     end
-    self.centralPos = self.ball.pos
-    self:setViewPort(M.visibleSize.width*1.5,M.visibleSize.height*1.5)    
+    self.centralPos = {x = M.width/2, y = M.height/2 }
+    self:setViewPort(M.visibleSize.width,M.visibleSize.height)    
     self:updateViewPortLeftBottom()
 	
 	return self
 end
 
-function scene:UpdateCentralPos()
-	self.centralPos = self.ball.pos
-end
-
 function scene:Update(elapse)
-    if self.ball.dir then
-        self.ball.pos.x = self.ball.pos.x + 5 * self.ball.dir.x
-        self.ball.pos.y = self.ball.pos.y + 5 * self.ball.dir.y
-        if self.ball.pos.x > M.width - self.ball.r then
-            self.ball.pos.x = M.width - self.ball.r
-        end
-
-        if self.ball.pos.x < self.ball.r then
-            self.ball.pos.x = self.ball.r
-        end
-
-        if self.ball.pos.y > M.height - self.ball.r then
-            self.ball.pos.y = M.height - self.ball.r
-        end
-
-        if self.ball.pos.y < self.ball.r then
-            self.ball.pos.y = self.ball.r
-        end
-        self:UpdateCentralPos()
-        self:updateViewPortLeftBottom()
-    end	
+	local ownBallCount = 0
+	local cx = 0
+	local cy = 0
+	for k,v in pairs(self.balls) do
+		v:Update(elapse)
+		if v.userID == userID then
+			cx = cx + v.pos.x
+			cy = cy + v.pos.y
+			ownBallCount = ownBallCount + 1
+		end
+	end
+	if ownBallCount > 0 then
+		self.centralPos.x = cx/ownBallCount --(self.centralPos.x + cx) / 2
+		self.centralPos.y = cy/ownBallCount --(self.centralPos.y + cy) / 2
+		self:updateViewPortLeftBottom()
+	end
 end
 
 function scene:Render()
@@ -152,12 +139,48 @@ function scene:Render()
         end
     end
 
-    local screenPos = self:viewPort2Screen(self:world2ViewPort(self.ball.pos))
-    self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), self.ball.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, self.ball.color)
+    for k,v in pairs(self.balls) do
+    	local screenPos = self:viewPort2Screen(self:world2ViewPort(v.pos))
+    	self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
+    end
 end
 
+M.msgHandler = {}
+
+
+M.msgHandler["Login"] = function (self,event)
+	cclog("LoginOK")
+    local wpk = net.NewWPacket()
+    wpk:WriteTable({cmd="EnterBattle"})
+    send2Server(wpk)	
+end
+
+M.msgHandler["ServerTick"] = function (self,event)
+	cclog("ServerTick")
+end
+
+M.msgHandler["BeginSee"] = function (self,event)
+	for k,v in pairs(event.balls) do
+		local color = config.colors[v.color]
+		color = cc.c4f(color[1],color[2],color[3],color[4])
+		local newBall = ball.new(v.userID,v.id,v.pos,color,v.r)
+		self.balls[newBall.id] = newBall
+	end
+end
+
+M.msgHandler["BallUpdate"] = function(self,event)
+	local ball = self.balls[event.id]
+	ball.pos = event.pos
+end
+
+
 function scene:DispatchEvent(event)
-	self.ball.dir = event
+	local cmd = event.cmd
+	cclog("DispatchEvent:%s",cmd)
+	local handler = M.msgHandler[cmd]
+	if handler then
+		handler(self,event)
+	end
 end
 
 

@@ -7,12 +7,21 @@ cclog = function(...)
     print(string.format(...))
 end
 
+userID = 1001
+conn2Server = nil
+
 -- for CCLuaEngine traceback
 function __G__TRACKBACK__(msg)
     cclog("----------------------------------------")
     cclog("LUA ERROR: " .. tostring(msg) .. "\n")
     cclog(debug.traceback())
     cclog("----------------------------------------")
+end
+
+function send2Server(msg)
+    if conn2Server then
+        net.Send(conn2Server,msg)
+    end
 end
 
 local function initGLView()
@@ -25,7 +34,7 @@ local function initGLView()
 
     director:setOpenGLView(glView)
 
-    glView:setDesignResolutionSize(1600, 960, cc.ResolutionPolicy.NO_BORDER)
+    glView:setDesignResolutionSize(1024, 768, cc.ResolutionPolicy.NO_BORDER)
 
     --turn on display FPS
     director:setDisplayStats(true)
@@ -54,21 +63,27 @@ local function main()
         layerFarm:addChild(draw, 10)
         scene = Scene.New():Init(draw)
 
---[[
         net.Connect("127.0.0.1",8010,function (s,success)
             if success then 
                 cclog("connect to server ok")
+                conn2Server = s
                 net.Bind(s,net.PacketDecoder(),function (s,rpk)
                     if rpk then
+                        local msg = rpk:ReadTable()
                         --将网络包交给场景处理
-                        scene:DispatchEvent(rpk)
+                        scene:DispatchEvent(msg)
                     else
                         --连接断开
+                        conn2Server = nil
                     end
                 end)
+
+                local wpk = net.NewWPacket()
+                wpk:WriteTable({cmd="Login",userID=userID})
+                net.Send(s,wpk)
             end
         end)
-]]
+
         function tick()
             net.Run(0)
             scene:Update()
@@ -77,7 +92,6 @@ local function main()
         cc.Director:getInstance():getScheduler():scheduleScriptFunc(tick, 1/60, false)   
         return layerFarm
     end
-
 
     -- create menu
     local function createLayerMenu()
@@ -96,7 +110,7 @@ local function main()
         spit = cc.Menu:create(spitItem)
         local itemWidth = spitItem:getContentSize().width
         local itemHeight = spitItem:getContentSize().height
-        spit:setPosition(origin.x + itemWidth/2 + 1100, origin.y + itemHeight/2 + 100)
+        spit:setPosition(origin.x + itemWidth/2 + 700, origin.y + itemHeight/2 + 50)
         layerMenu:addChild(spit)
 
         --分裂
@@ -110,7 +124,7 @@ local function main()
         split = cc.Menu:create(splitItem)
         local itemWidth = splitItem:getContentSize().width
         local itemHeight = splitItem:getContentSize().height
-        split:setPosition(origin.x + itemWidth/2 + 1200, origin.y + itemHeight/2 + 100)
+        split:setPosition(origin.x + itemWidth/2 + 850, origin.y + itemHeight/2 + 50)
         layerMenu:addChild(split)
 
         return layerMenu
@@ -169,8 +183,11 @@ local function main()
             stick:setPosition(pos)
             cclog("onTouchMoved: %0.2f, %0.2f dir:%d", location.x, location.y,dir)
             touchMoving = true
-            scene:DispatchEvent(norDir)
-
+                
+            local wpk = net.NewWPacket()
+            wpk:WriteTable({cmd="Move",dir=dir})
+            send2Server(wpk)     
+            
         end
         
         local function onTouchEnded(touch, event)
@@ -180,7 +197,9 @@ local function main()
             cclog("onTouchEnded: %0.2f, %0.2f", pos.x, pos.y)
 
             if not touchMoving then
-                scene:DispatchEvent(nil)
+                local wpk = net.NewWPacket()
+                wpk:WriteTable({cmd="Stop"})
+                send2Server(wpk)
                 cclog("stop")
             end
             touchMoving = nil
