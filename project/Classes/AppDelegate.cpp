@@ -43,7 +43,7 @@ bool AppDelegate::applicationDidFinishLaunching()
 #endif
     FileUtils::getInstance()->addSearchPath("src");
     FileUtils::getInstance()->addSearchPath("res");
-    engine->executeString("require 'hello.lua'");
+    engine->executeString("require 'main.lua'");
 
     return true;
 }

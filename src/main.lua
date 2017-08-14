@@ -161,7 +161,7 @@ local function main()
             plate:setPosition(location)
             stick:setPosition(location)
             beginPos = location
-            cclog("onTouchBegan: %0.2f, %0.2f", location.x, location.y)
+            --cclog("onTouchBegan: %0.2f, %0.2f", location.x, location.y)
             return true
         end
 
@@ -181,7 +181,7 @@ local function main()
                 pos = cc.pAdd(beginPos, cc.p(norDir.x * 100, norDir.y * 100))
             end
             stick:setPosition(pos)
-            cclog("onTouchMoved: %0.2f, %0.2f dir:%d", location.x, location.y,dir)
+            --cclog("onTouchMoved: %0.2f, %0.2f dir:%d", location.x, location.y,dir)
             touchMoving = true
                 
             local wpk = net.NewWPacket()
@@ -194,7 +194,7 @@ local function main()
             local pos = cc.p(origin.x + 150, origin.y + 150)
             plate:setPosition(pos)
             stick:setPosition(pos)
-            cclog("onTouchEnded: %0.2f, %0.2f", pos.x, pos.y)
+            --cclog("onTouchEnded: %0.2f, %0.2f", pos.x, pos.y)
 
             if not touchMoving then
                 local wpk = net.NewWPacket()

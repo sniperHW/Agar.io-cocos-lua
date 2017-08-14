@@ -8,16 +8,21 @@ scene.__index = scene
 
 M.visibleSize = cc.Director:getInstance():getVisibleSize()
 M.origin = cc.Director:getInstance():getVisibleOrigin()
+M.delayTick = 120
 
 --场景大小
-M.width = 10000
-M.height = 10000
-
+M.width = config.mapWidth
+M.height = config.mapWidth
 
 M.New = function ()
 	local o = {}   
 	o = setmetatable(o, scene)
 	return o
+end
+
+--返回通过本地tick估算的serverTick
+function scene:GetServerTick()
+	return self.gameTick + self.serverTickDelta
 end
 
 function scene:viewPort2Screen(viewPortPos)
@@ -92,9 +97,13 @@ end
 
 function scene:Init(drawer)
 	cclog("(%d, %d, %d, %d)", M.origin.x, M.origin.y, M.visibleSize.width, M.visibleSize.height)
+	self.serverTickDelta = 0
+	self.gameTick = 0
+	self.lastTick = net.GetSysTick()
 	self.drawer = drawer
     self.balls = {}
     self.stars = {}
+    self.delayMsgQue = {}
     for i=1,2048 do
         local star = {}
         star.color = cc.c4f(math.random(1,100)/100,math.random(1,100)/100,math.random(1,100)/100,1)
@@ -110,6 +119,10 @@ function scene:Init(drawer)
 end
 
 function scene:Update(elapse)
+	local nowTick = net.GetSysTick()
+	self.gameTick = self.gameTick + nowTick - self.lastTick
+	self.lastTick = nowTick
+	self:processDelayMsg()
 	local ownBallCount = 0
 	local cx = 0
 	local cy = 0
@@ -156,10 +169,12 @@ M.msgHandler["Login"] = function (self,event)
 end
 
 M.msgHandler["ServerTick"] = function (self,event)
-	cclog("ServerTick")
+	self.serverTickDelta = event.serverTick - self.gameTick
+	cclog("serverTickDelta %d",self.serverTickDelta)
 end
 
 M.msgHandler["BeginSee"] = function (self,event)
+	cclog("localServerTick %d,event.timestamp %d",self:GetServerTick(),event.timestamp)
 	for k,v in pairs(event.balls) do
 		local color = config.colors[v.color]
 		color = cc.c4f(color[1],color[2],color[3],color[4])
@@ -173,9 +188,33 @@ M.msgHandler["BallUpdate"] = function(self,event)
 	ball.pos = event.pos
 end
 
+function scene:processDelayMsg()
+	local tick = self:GetServerTick()
+	while #self.delayMsgQue > 0 do
+		local msg = self.delayMsgQue[1]
+		if msg.timestamp <= tick then
+			table.remove(self.delayMsgQue,1)
+			cclog("processDelayMsg:%s",msg.cmd)
+			local handler = M.msgHandler[msg.cmd]
+			if handler then
+				handler(self,msg)
+			end			
+		else
+			cclog("msg.timestamp > tick")
+			return
+		end
+	end
+end
 
 function scene:DispatchEvent(event)
 	local cmd = event.cmd
+	--有timestamp参数的消息需要延时处理
+	if event.timestamp then
+		--将消息延时M.delayTick处理
+		event.timestamp = event.timestamp + M.delayTick
+		table.insert(self.delayMsgQue,event)
+		return
+	end
 	cclog("DispatchEvent:%s",cmd)
 	local handler = M.msgHandler[cmd]
 	if handler then
