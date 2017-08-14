@@ -14,6 +14,17 @@ M.delayTick = 120
 M.width = config.mapWidth
 M.height = config.mapWidth
 
+M.viewBounderyBottomLeft = {
+	x = 0 - M.visibleSize.width/2,
+	y = 0 - M.visibleSize.height/2
+}
+
+M.viewBounderyTopRight = {
+	x = M.width + M.visibleSize.width/2,
+	y = M.height + M.visibleSize.height/2
+}
+
+
 M.New = function ()
 	local o = {}   
 	o = setmetatable(o, scene)
@@ -22,7 +33,7 @@ end
 
 --返回通过本地tick估算的serverTick
 function scene:GetServerTick()
-	return self.gameTick + self.serverTickDelta
+	return self.gameTick --+ self.serverTickDelta
 end
 
 function scene:viewPort2Screen(viewPortPos)
@@ -67,20 +78,20 @@ function scene:updateViewPortLeftBottom()
 
 	--根据边界修正坐标
 
-	if leftBottom.x < 0 then
-		leftBottom.x = 0
+	if leftBottom.x < M.viewBounderyBottomLeft.x then
+		leftBottom.x = M.viewBounderyBottomLeft.x
 	end
 
-	if leftBottom.y < 0 then
-		leftBottom.y = 0
+	if leftBottom.y < M.viewBounderyBottomLeft.y  then
+		leftBottom.y = M.viewBounderyBottomLeft.y
 	end
 
-	if leftBottom.x + self.viewPort.width > M.width then
-		leftBottom.x = M.width - self.viewPort.width
+	if leftBottom.x + self.viewPort.width > M.viewBounderyTopRight.x then
+		leftBottom.x = M.viewBounderyTopRight.x - self.viewPort.width--M.width - self.viewPort.width + M.visibleSize.width/2
 	end
 
-	if leftBottom.y + self.viewPort.height > M.height then
-		leftBottom.y = M.height - self.viewPort.height
+	if leftBottom.y + self.viewPort.height > M.viewBounderyTopRight.y then
+		leftBottom.y = M.viewBounderyTopRight.y - self.viewPort.height--M.height - self.viewPort.height + M.visibleSize.height/2
 	end	
 
 	self.viewPort.leftBottom = leftBottom
@@ -118,9 +129,21 @@ function scene:Init(drawer)
 	return self
 end
 
-function scene:Update(elapse)
+function scene:Update()
+
 	local nowTick = net.GetSysTick()
-	self.gameTick = self.gameTick + nowTick - self.lastTick
+
+	if self.lastFixTime then
+		if nowTick - self.lastFixTime > 1000 then
+			local wpk = net.NewWPacket()
+    		wpk:WriteTable({cmd="FixTime"})
+    		send2Server(wpk)
+			self.lastFixTime = nowTick
+		end
+	end
+
+	local elapse = nowTick - self.lastTick
+	self.gameTick = self.gameTick + elapse
 	self.lastTick = nowTick
 	self:processDelayMsg()
 	local ownBallCount = 0
@@ -168,9 +191,18 @@ M.msgHandler["Login"] = function (self,event)
     send2Server(wpk)	
 end
 
+M.msgHandler["FixTime"] = function (self,event)
+	local nowTick = net.GetSysTick()
+	local elapse = nowTick - self.lastTick
+	cclog("FixTime %d %d %d",elapse , nowTick - event.clientTick , event.clientTick)	 
+	self.gameTick = event.serverTick - elapse
+end
+
 M.msgHandler["ServerTick"] = function (self,event)
-	self.serverTickDelta = event.serverTick - self.gameTick
-	cclog("serverTickDelta %d",self.serverTickDelta)
+	local nowTick = net.GetSysTick()
+	local elapse = nowTick - self.lastTick 
+	self.gameTick = event.serverTick - elapse
+	self.lastFixTime = nowTick
 end
 
 M.msgHandler["BeginSee"] = function (self,event)
@@ -178,29 +210,28 @@ M.msgHandler["BeginSee"] = function (self,event)
 	for k,v in pairs(event.balls) do
 		local color = config.colors[v.color]
 		color = cc.c4f(color[1],color[2],color[3],color[4])
-		local newBall = ball.new(v.userID,v.id,v.pos,color,v.r)
+		local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r)
 		self.balls[newBall.id] = newBall
 	end
 end
 
 M.msgHandler["BallUpdate"] = function(self,event)
 	local ball = self.balls[event.id]
-	ball.pos = event.pos
+	ball:OnBallUpdate(event)
 end
 
 function scene:processDelayMsg()
 	local tick = self:GetServerTick()
 	while #self.delayMsgQue > 0 do
 		local msg = self.delayMsgQue[1]
-		if msg.timestamp <= tick then
+		if msg.timestamp >= tick then
 			table.remove(self.delayMsgQue,1)
-			cclog("processDelayMsg:%s",msg.cmd)
+			--cclog("processDelayMsg:%s",msg.cmd)
 			local handler = M.msgHandler[msg.cmd]
 			if handler then
 				handler(self,msg)
 			end			
 		else
-			cclog("msg.timestamp > tick")
 			return
 		end
 	end
@@ -215,7 +246,7 @@ function scene:DispatchEvent(event)
 		table.insert(self.delayMsgQue,event)
 		return
 	end
-	cclog("DispatchEvent:%s",cmd)
+	--cclog("DispatchEvent:%s",cmd)
 	local handler = M.msgHandler[cmd]
 	if handler then
 		handler(self,event)
