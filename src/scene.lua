@@ -1,6 +1,7 @@
 local net = require("net")
 local ball = require("ball")
 local config = require("config")
+local star = require("star")
 local M = {}
 
 local scene = {}
@@ -136,7 +137,7 @@ function scene:Update()
 	if self.lastFixTime then
 		if nowTick - self.lastFixTime > 1000 then
 			local wpk = net.NewWPacket()
-    		wpk:WriteTable({cmd="FixTime"})
+    		wpk:WriteTable({cmd="FixTime",clientTick=nowTick})
     		send2Server(wpk)
 			self.lastFixTime = nowTick
 		end
@@ -166,14 +167,15 @@ end
 
 function scene:Render()
     self.drawer:clear()
-    for k,v in pairs(self.stars) do
+    star.Render(self)
+    --[[for k,v in pairs(self.stars) do
         local viewPortPos = self:world2ViewPort(v.pos)
         if self:isInViewPort(viewPortPos) then
         	local screenPos = self:viewPort2Screen(viewPortPos)
         	--只有在屏幕内的星星才渲染
         	self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
         end
-    end
+    end]]--
 
     for k,v in pairs(self.balls) do
     	local screenPos = self:viewPort2Screen(self:world2ViewPort(v.pos))
@@ -194,7 +196,7 @@ end
 M.msgHandler["FixTime"] = function (self,event)
 	local nowTick = net.GetSysTick()
 	local elapse = nowTick - self.lastTick
-	cclog("FixTime %d %d %d",elapse , nowTick - event.clientTick , event.clientTick)	 
+	--cclog("FixTime %d %d %d",elapse , nowTick - event.clientTick , event.clientTick)	 
 	self.gameTick = event.serverTick - elapse
 end
 
@@ -206,7 +208,7 @@ M.msgHandler["ServerTick"] = function (self,event)
 end
 
 M.msgHandler["BeginSee"] = function (self,event)
-	cclog("localServerTick %d,event.timestamp %d",self:GetServerTick(),event.timestamp)
+	--cclog("localServerTick %d,event.timestamp %d",self:GetServerTick(),event.timestamp)
 	for k,v in pairs(event.balls) do
 		local color = config.colors[v.color]
 		color = cc.c4f(color[1],color[2],color[3],color[4])
@@ -218,6 +220,11 @@ end
 M.msgHandler["BallUpdate"] = function(self,event)
 	local ball = self.balls[event.id]
 	ball:OnBallUpdate(event)
+end
+
+M.msgHandler["EnterRoom"] = function(self,event)
+	cclog("star count:%d",#event.stars * 32)
+	star.OnStars(event.stars)
 end
 
 function scene:processDelayMsg()

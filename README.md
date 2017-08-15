@@ -8,3 +8,5 @@
 
 [netclient](https://github.com/sniperHW/netclient)
 
+windows下请直接使用预编译的net.dll
+
