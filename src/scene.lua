@@ -88,11 +88,11 @@ function scene:updateViewPortLeftBottom()
 	end
 
 	if leftBottom.x + self.viewPort.width > M.viewBounderyTopRight.x then
-		leftBottom.x = M.viewBounderyTopRight.x - self.viewPort.width--M.width - self.viewPort.width + M.visibleSize.width/2
+		leftBottom.x = M.viewBounderyTopRight.x - self.viewPort.width
 	end
 
 	if leftBottom.y + self.viewPort.height > M.viewBounderyTopRight.y then
-		leftBottom.y = M.viewBounderyTopRight.y - self.viewPort.height--M.height - self.viewPort.height + M.visibleSize.height/2
+		leftBottom.y = M.viewBounderyTopRight.y - self.viewPort.height
 	end	
 
 	self.viewPort.leftBottom = leftBottom
@@ -114,15 +114,7 @@ function scene:Init(drawer)
 	self.lastTick = net.GetSysTick()
 	self.drawer = drawer
     self.balls = {}
-    self.stars = {}
     self.delayMsgQue = {}
-    for i=1,2048 do
-        local star = {}
-        star.color = cc.c4f(math.random(1,100)/100,math.random(1,100)/100,math.random(1,100)/100,1)
-        star.pos = {x = math.random(1,M.width),y = math.random(1,M.height)}
-        star.r = 2
-        table.insert(self.stars,star)           
-    end
     self.centralPos = {x = M.width/2, y = M.height/2 }
     self:setViewPort(M.visibleSize.width,M.visibleSize.height)    
     self:updateViewPortLeftBottom()
@@ -168,15 +160,6 @@ end
 function scene:Render()
     self.drawer:clear()
     star.Render(self)
-    --[[for k,v in pairs(self.stars) do
-        local viewPortPos = self:world2ViewPort(v.pos)
-        if self:isInViewPort(viewPortPos) then
-        	local screenPos = self:viewPort2Screen(viewPortPos)
-        	--只有在屏幕内的星星才渲染
-        	self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
-        end
-    end]]--
-
     for k,v in pairs(self.balls) do
     	local screenPos = self:viewPort2Screen(self:world2ViewPort(v.pos))
     	self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
