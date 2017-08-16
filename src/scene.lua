@@ -122,10 +122,8 @@ function scene:Init(drawer)
 	return self
 end
 
-function scene:Update()
-
+function scene:UpdateTick()
 	local nowTick = net.GetSysTick()
-
 	if self.lastFixTime then
 		if nowTick - self.lastFixTime > 1000 then
 			local wpk = net.NewWPacket()
@@ -134,10 +132,13 @@ function scene:Update()
 			self.lastFixTime = nowTick
 		end
 	end
-
-	local elapse = nowTick - self.lastTick
-	self.gameTick = self.gameTick + elapse
+	self.elapse = nowTick - self.lastTick	
+	self.gameTick = self.gameTick + self.elapse
 	self.lastTick = nowTick
+end
+
+function scene:Update()
+	local elapse = self.elapse
 	self:processDelayMsg()
 	local ownBallCount = 0
 	local cx = 0
@@ -207,14 +208,22 @@ end
 
 M.msgHandler["EnterRoom"] = function(self,event)
 	cclog("star count:%d",#event.stars * 32)
-	star.OnStars(event.stars)
+	star.OnStars(event)
+end
+
+M.msgHandler["StarDead"] = function(self,event)
+	star.OnStarDead(event)
+end
+
+M.msgHandler["StarRelive"] = function(self,event)
+	star.OnStarRelive(event)
 end
 
 function scene:processDelayMsg()
 	local tick = self:GetServerTick()
 	while #self.delayMsgQue > 0 do
 		local msg = self.delayMsgQue[1]
-		if msg.timestamp >= tick then
+		if msg.timestamp <= tick then
 			table.remove(self.delayMsgQue,1)
 			--cclog("processDelayMsg:%s",msg.cmd)
 			local handler = M.msgHandler[msg.cmd]
@@ -230,12 +239,14 @@ end
 function scene:DispatchEvent(event)
 	local cmd = event.cmd
 	--有timestamp参数的消息需要延时处理
-	if event.timestamp then
+	--[[if event.timestamp then
 		--将消息延时M.delayTick处理
-		event.timestamp = event.timestamp + M.delayTick
+		local nowTick = net.GetSysTick()
+		local elapse = nowTick - self.lastTick 
+		event.timestamp = event.timestamp + M.delayTick - elapse
 		table.insert(self.delayMsgQue,event)
 		return
-	end
+	end]]--
 	--cclog("DispatchEvent:%s",cmd)
 	local handler = M.msgHandler[cmd]
 	if handler then

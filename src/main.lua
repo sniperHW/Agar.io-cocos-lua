@@ -85,6 +85,7 @@ local function main()
         end)
 
         function tick()
+            scene:UpdateTick()
             net.Run(0)
             scene:Update()
             scene:Render()

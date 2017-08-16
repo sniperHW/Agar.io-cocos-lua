@@ -13,9 +13,8 @@ local function newStar(starID)
 	return star
 end
 
-function M.OnStars(stars)
-
-	for k,v in pairs(stars) do
+function M.OnStars(event)
+	for k,v in pairs(event.stars) do
 		local i = k - 1
 		for j = 0,31 do
 			if bit.band(bit.lshift(1,j),v) ~= 0 then
@@ -37,6 +36,16 @@ function M.OnStars(stars)
 	end
 ]]	
 
+end
+
+function M.OnStarDead(event)
+	M.stars[event.id] = nil
+end
+
+function M.OnStarRelive(event)
+	for k,v in pairs(event.stars) do
+		M.stars[v] = newStar(v)
+	end
 end
 
 function M.Render(scene)

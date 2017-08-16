@@ -69,7 +69,10 @@ end
 
 function ball:OnBallUpdate(msg)
 	self.velocitys = nil
-	local elapse = msg.timestamp - self.scene:GetServerTick() + msg.elapse
+	self.r = msg.r
+	local delay = self.scene:GetServerTick() - msg.timestamp
+	local elapse = msg.elapse - delay
+	--local elapse =  msg.elapse - (msg.timestamp - self.scene:GetServerTick())   --msg.elapse --msg.timestamp - self.scene:GetServerTick() + msg.elapse
 	if self.usePredict or elapse <= 0 then
 		
 		if self.usePredict then
@@ -80,7 +83,9 @@ function ball:OnBallUpdate(msg)
 		end
 		
 		if elapse <= 0 then
+			print("here",self.scene:GetServerTick())
 			--延迟太严重无法平滑处理，直接拖拽
+			self.predictV = msg.v
 			self.pos.x = msg.pos.x
 			self.pos.y = msg.pos.y
 			self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
@@ -92,9 +97,6 @@ function ball:OnBallUpdate(msg)
 	self.predictV = msg.v
 	--计算速度
 	local v = util.vector2D.new(msg.pos.x - self.pos.x, msg.pos.y - self.pos.y)/(elapse/1000)
-	--cclog("local pos(%f,%f), server pos(%f,%f), server elapse:%d, local elapse:%d, speed:%f",
-	--	self.pos.x,self.pos.y,msg.pos.x,msg.pos.y,
-	--	msg.elapse,self.scene:GetServerTick() - msg.timestamp + msg.elapse,v:mag())
 	self.v = util.velocity.new(v,nil,nil,elapse)
 end
 
