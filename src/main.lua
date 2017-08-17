@@ -63,7 +63,7 @@ local function main()
         layerFarm:addChild(draw, 10)
         scene = Scene.New():Init(draw)
 
-        net.Connect("139.224.59.83",9100,function (s,success)
+        net.Connect(--[["139.224.59.83"]]"127.0.0.1",9100,function (s,success)
             if success then 
                 cclog("connect to server ok")
                 conn2Server = s

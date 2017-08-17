@@ -76,17 +76,18 @@ function ball:OnBallUpdate(msg)
 	end
 
 	local delay = self.scene:GetServerTick() - msg.timestamp
-	--cclog("delay2:%d",delay)
 	local elapse = msg.elapse - delay
 	if elapse <= 0 then
-		cclog("set pos tick:%d,delay:%d,msg.elapse:%d,userID:%d",self.scene:GetServerTick(),delay,msg.elapse,self.userID)
 		--延迟太严重无法平滑处理，直接拖拽
 		self.predictV = msg.v
+		local v = util.vector2D.new(self.predictV.x , self.predictV.y)
+		self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
+		cclog("set pos tick:%d,delay:%d,msg.elapse:%d,userID:%d,distance:%d,v:%d",self.scene:GetServerTick(),delay,msg.elapse,self.userID,util.point2D.distance(self.pos,msg.pos),v:mag())
 		self.pos.x = msg.pos.x
 		self.pos.y = msg.pos.y
-		self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
 		return
-	end	
+	end
+	--local elapse = msg.elapse	
 
 	self.usePredict = false
 	self.predictV = msg.v
