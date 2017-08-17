@@ -194,11 +194,25 @@ end
 M.msgHandler["BeginSee"] = function (self,event)
 	--cclog("localServerTick %d,event.timestamp %d",self:GetServerTick(),event.timestamp)
 	for k,v in pairs(event.balls) do
+		--cclog("BeginSee ballID:%d,pos(%d,%d)",v.id,v.pos.x,v.pos.y)
 		local color = config.colors[v.color]
 		color = cc.c4f(color[1],color[2],color[3],color[4])
-		local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r)
+		local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r,v.velocitys)
 		self.balls[newBall.id] = newBall
 	end
+end
+
+M.msgHandler["EndSee"] = function (self,event)
+	cclog("endsee %d",event.id)
+	self.balls[event.id] = nil	
+	--cclog("localServerTick %d,event.timestamp %d",self:GetServerTick(),event.timestamp)
+	--for k,v in pairs(event.balls) do
+		--cclog("BeginSee ballID:%d,pos(%d,%d)",v.id,v.pos.x,v.pos.y)
+	--	local color = config.colors[v.color]
+	--	color = cc.c4f(color[1],color[2],color[3],color[4])
+	--	local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r,v.velocitys)
+	--	self.balls[newBall.id] = newBall
+	--end
 end
 
 M.msgHandler["BallUpdate"] = function(self,event)
@@ -239,14 +253,14 @@ end
 function scene:DispatchEvent(event)
 	local cmd = event.cmd
 	--有timestamp参数的消息需要延时处理
-	--[[if event.timestamp then
+	if event.timestamp then
 		--将消息延时M.delayTick处理
 		local nowTick = net.GetSysTick()
 		local elapse = nowTick - self.lastTick 
 		event.timestamp = event.timestamp + M.delayTick - elapse
 		table.insert(self.delayMsgQue,event)
 		return
-	end]]--
+	end
 	--cclog("DispatchEvent:%s",cmd)
 	local handler = M.msgHandler[cmd]
 	if handler then

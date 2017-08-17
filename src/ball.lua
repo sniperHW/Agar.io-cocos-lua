@@ -70,28 +70,22 @@ end
 function ball:OnBallUpdate(msg)
 	self.velocitys = nil
 	self.r = msg.r
+
+	if not msg.elapse then
+		return
+	end
+
 	local delay = self.scene:GetServerTick() - msg.timestamp
 	local elapse = msg.elapse - delay
-	--local elapse =  msg.elapse - (msg.timestamp - self.scene:GetServerTick())   --msg.elapse --msg.timestamp - self.scene:GetServerTick() + msg.elapse
-	if self.usePredict or elapse <= 0 then
-		
-		if self.usePredict then
-			elapse = elapse - self.v.runTime	
-			if self.v.runTime > 0 then
-				cclog("predict runtime %d, elapse %d ,server elapse:%d , msgDelay:%d",self.v.runTime , elapse , msg.elapse, msg.timestamp - self.scene:GetServerTick())
-			end
-		end
-		
-		if elapse <= 0 then
-			print("here",self.scene:GetServerTick())
-			--延迟太严重无法平滑处理，直接拖拽
-			self.predictV = msg.v
-			self.pos.x = msg.pos.x
-			self.pos.y = msg.pos.y
-			self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
-			return
-		end
-	end
+	if elapse <= 0 then
+		print("set pos",self.scene:GetServerTick())
+		--延迟太严重无法平滑处理，直接拖拽
+		self.predictV = msg.v
+		self.pos.x = msg.pos.x
+		self.pos.y = msg.pos.y
+		self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
+		return
+	end	
 
 	self.usePredict = false
 	self.predictV = msg.v

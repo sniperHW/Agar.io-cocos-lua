@@ -102,6 +102,10 @@ local function main()
         --吐子弹
         local function onSpit()
             cclog("onSpit")
+            local wpk = net.NewWPacket()
+            wpk:WriteTable({cmd="Spit"})
+            --net.Send(s,wpk)
+            send2Server(wpk)            
         end
         
         -- add the left-bottom "tools" menu to invoke menuPopup
@@ -116,7 +120,11 @@ local function main()
 
         --分裂
         local function onSplit()
-            cclog("onSplit")
+            --cclog("onSplit")
+            local wpk = net.NewWPacket()
+            wpk:WriteTable({cmd="Split"})
+            send2Server(wpk)   
+            --net.Send(s,wpk)            
         end
 
         local splitItem = cc.MenuItemImage:create("menu1.png", "menu1.png")
