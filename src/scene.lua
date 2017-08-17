@@ -118,7 +118,6 @@ function scene:Init(drawer)
     self.centralPos = {x = M.width/2, y = M.height/2 }
     self:setViewPort(M.visibleSize.width,M.visibleSize.height)    
     self:updateViewPortLeftBottom()
-	
 	return self
 end
 
@@ -162,8 +161,17 @@ function scene:Render()
     self.drawer:clear()
     star.Render(self)
     for k,v in pairs(self.balls) do
-    	local screenPos = self:viewPort2Screen(self:world2ViewPort(v.pos))
-    	self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
+    	local viewPortPos = self:world2ViewPort(v.pos)
+
+    	local topLeft = {x = viewPortPos.x - v.r , y = viewPortPos.y + v.r}
+    	local bottomLeft = {x = viewPortPos.x - v.r , y = viewPortPos.y - v.r}
+    	local topRight = {x = viewPortPos.x + v.r , y = viewPortPos.y + v.r}
+    	local bottomRight = {x = viewPortPos.x + v.r , y = viewPortPos.y - v.r}
+
+    	if self:isInViewPort(topLeft) or self:isInViewPort(bottomLeft) or self:isInViewPort(topRight) or self:isInViewPort(bottomRight) then
+    		local screenPos = self:viewPort2Screen(viewPortPos)
+    		self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
+    	end	
     end
 end
 
@@ -181,14 +189,16 @@ M.msgHandler["FixTime"] = function (self,event)
 	local nowTick = net.GetSysTick()
 	local elapse = nowTick - self.lastTick
 	--cclog("FixTime %d %d %d",elapse , nowTick - event.clientTick , event.clientTick)	 
+	--print(event.serverTick - self.gameTick)	
 	self.gameTick = event.serverTick - elapse
+	self.lastFixTime = nowTick
 end
 
 M.msgHandler["ServerTick"] = function (self,event)
 	local nowTick = net.GetSysTick()
 	local elapse = nowTick - self.lastTick 
 	self.gameTick = event.serverTick - elapse
-	self.lastFixTime = nowTick
+	self.lastFixTime = nowTick	
 end
 
 M.msgHandler["BeginSee"] = function (self,event)
@@ -256,7 +266,8 @@ function scene:DispatchEvent(event)
 	if event.timestamp then
 		--将消息延时M.delayTick处理
 		local nowTick = net.GetSysTick()
-		local elapse = nowTick - self.lastTick 
+		local elapse = nowTick - self.lastTick
+		--cclog("msg delay:%d,elapse:%d",self:GetServerTick() - event.timestamp + elapse,elapse)		 
 		event.timestamp = event.timestamp + M.delayTick - elapse
 		table.insert(self.delayMsgQue,event)
 		return

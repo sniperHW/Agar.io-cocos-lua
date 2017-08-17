@@ -76,9 +76,10 @@ function ball:OnBallUpdate(msg)
 	end
 
 	local delay = self.scene:GetServerTick() - msg.timestamp
+	--cclog("delay2:%d",delay)
 	local elapse = msg.elapse - delay
 	if elapse <= 0 then
-		print("set pos",self.scene:GetServerTick())
+		cclog("set pos tick:%d,delay:%d,msg.elapse:%d,userID:%d",self.scene:GetServerTick(),delay,msg.elapse,self.userID)
 		--延迟太严重无法平滑处理，直接拖拽
 		self.predictV = msg.v
 		self.pos.x = msg.pos.x
