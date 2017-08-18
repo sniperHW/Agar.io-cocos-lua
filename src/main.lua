@@ -107,7 +107,7 @@ local function main()
         end
         
         -- add the left-bottom "tools" menu to invoke menuPopup
-        local spitItem = cc.MenuItemImage:create("menu1.png", "menu1.png")
+        local spitItem = cc.MenuItemImage:create("Fight_NormalIco_01.png", "Fight_NormalIco_01.png")
         spitItem:setPosition(0, 0)
         spitItem:registerScriptTapHandler(onSpit)
 
@@ -124,7 +124,7 @@ local function main()
             send2Server(wpk)               
         end
 
-        local splitItem = cc.MenuItemImage:create("menu1.png", "menu1.png")
+        local splitItem = cc.MenuItemImage:create("Fight_NormalIco_02.png", "Fight_NormalIco_02.png")
         splitItem:setPosition(0, 0)
         splitItem:registerScriptTapHandler(onSplit)
         split = cc.Menu:create(splitItem)
