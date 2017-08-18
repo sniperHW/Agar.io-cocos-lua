@@ -63,7 +63,7 @@ function ball:Update(elapse)
 
 			--运动量已经用完，使用预测速度移动
 			self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
-			self.usePredict = true
+
 		end
 		local v = self.v:Update(elapse)
 		self:UpdatePosition(v,elapse/1000)
@@ -92,8 +92,6 @@ function ball:OnBallUpdate(msg,ballInfo,timestamp)
 		self.r = self.targetR
 	end
 
-	--self.r = ballInfo.r
-	--cclog("msg.elapse %d",msg.elapse)
 	local doSetPos --= true
 	if not doSetPos then
 		local delay = self.scene:GetServerTick() - timestamp
@@ -104,9 +102,6 @@ function ball:OnBallUpdate(msg,ballInfo,timestamp)
 			if self.predictV then
 				local v = util.vector2D.new(self.predictV.x , self.predictV.y)
 				self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
-				self.usePredict = true
-			else
-				self.usePredict = false
 			end
 			cclog("set pos tick:%d,delay:%d,ballInfo.elapse:%d,userID:%d,distance:%d",self.scene:GetServerTick(),delay,msg.elapse,self.userID,util.point2D.distance(self.pos,ballInfo.pos))
 			self.pos.x = ballInfo.pos.x
@@ -114,8 +109,6 @@ function ball:OnBallUpdate(msg,ballInfo,timestamp)
 			return
 		end
 			
-
-		self.usePredict = false
 		self.predictV = ballInfo.v
 		--计算速度
 		local v = util.vector2D.new(ballInfo.pos.x - self.pos.x, ballInfo.pos.y - self.pos.y)/(elapse/1000)
