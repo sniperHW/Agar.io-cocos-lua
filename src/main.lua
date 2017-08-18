@@ -101,10 +101,8 @@ local function main()
 
         --吐子弹
         local function onSpit()
-            cclog("onSpit")
             local wpk = net.NewWPacket()
             wpk:WriteTable({cmd="Spit"})
-            --net.Send(s,wpk)
             send2Server(wpk)            
         end
         
@@ -112,6 +110,7 @@ local function main()
         local spitItem = cc.MenuItemImage:create("menu1.png", "menu1.png")
         spitItem:setPosition(0, 0)
         spitItem:registerScriptTapHandler(onSpit)
+
         spit = cc.Menu:create(spitItem)
         local itemWidth = spitItem:getContentSize().width
         local itemHeight = spitItem:getContentSize().height
@@ -120,11 +119,9 @@ local function main()
 
         --分裂
         local function onSplit()
-            --cclog("onSplit")
             local wpk = net.NewWPacket()
             wpk:WriteTable({cmd="Split"})
-            send2Server(wpk)   
-            --net.Send(s,wpk)            
+            send2Server(wpk)               
         end
 
         local splitItem = cc.MenuItemImage:create("menu1.png", "menu1.png")

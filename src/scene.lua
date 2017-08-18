@@ -106,7 +106,7 @@ function scene:setViewPort(width,height)
     self.viewPort.width = width
     self.viewPort.height = height
     self.scaleFactor = M.visibleSize.width/self.viewPort.width
-    cclog("scaleFactor:%f",self.scaleFactor)
+    --cclog("scaleFactor:%f",self.scaleFactor)
 end
 
 function scene:Init(drawer)
@@ -139,28 +139,79 @@ function scene:UpdateTick()
 	self.lastTick = nowTick
 end
 
+function scene:UpdateViewPort(selfBalls)
+	if #selfBalls == 0 then
+		return
+	end
+
+	if #selfBalls == 1 then
+		local baseR = config.Score2R(config.initScore)
+		local R = config.Score2R(selfBalls[1].r)
+		if R == baseR then
+			self:setViewPort(M.visibleSize.width,M.visibleSize.height)
+		else
+			local viewPortWidth =  math.floor((1+(R/baseR)/10) * M.visibleSize.width)
+			viewPortWidth = math.min(viewPortWidth,config.mapWidth)
+			local viewPortHeight = math.floor((M.visibleSize.height * viewPortWidth)/M.visibleSize.width)
+			self:setViewPort(viewPortWidth,viewPortHeight)
+		end
+	else
+		local maxDeltaX = 0
+		local maxDeltaY = 0
+		for k,v in pairs(selfBalls) do
+			local vv = util.vector2D.new(v.pos.x - self.centralPos.x , v.pos.y - self.centralPos.y)
+			local p = util.point2D.moveto(v.pos,vv:getDirAngle(),v.r)
+			local deltaX = math.abs(p.x - self.centralPos.x)
+			local deltaY = math.abs(p.y - self.centralPos.y)
+			maxDeltaX = math.max(deltaX , maxDeltaX)
+			maxDeltaY = math.max(deltaY , maxDeltaY)
+		end
+
+		--cclog("maxDeltaX %d,maxDeltaY %d",maxDeltaX,maxDeltaY)
+
+		if maxDeltaX/M.visibleSize.width > maxDeltaY/M.visibleSize.height then
+			if maxDeltaX > M.visibleSize.width/5 then
+				local viewPortWidth = self.viewPort.width/2 + maxDeltaX + 300
+				viewPortWidth = math.min(viewPortWidth,config.mapWidth)
+				local viewPortHeight = math.floor((M.visibleSize.height * viewPortWidth)/M.visibleSize.width)
+				self:setViewPort(viewPortWidth,viewPortHeight)			
+			else
+				self:setViewPort(M.visibleSize.width,M.visibleSize.height)
+			end
+		else
+			if maxDeltaY > M.visibleSize.height/5 then
+				local viewPortHeight = self.viewPort.height/2 + maxDeltaY + 300
+				viewPortHeight = math.min(viewPortHeight,config.mapWidth)
+				local viewPortWidth = math.floor((M.visibleSize.width * viewPortHeight)/M.visibleSize.height)
+				self:setViewPort(viewPortWidth,viewPortHeight)			
+			else
+				self:setViewPort(M.visibleSize.width,M.visibleSize.height)
+			end
+		end
+
+	end
+end
+
 function scene:Update()
 	local elapse = self.elapse
 	self:processDelayMsg()
 	local ownBallCount = 0
 	local cx = 0
 	local cy = 0
+	local selfBalls = {}
 	for k,v in pairs(self.balls) do
 		v:Update(elapse)
 		if v.userID == userID then
 			cx = cx + v.pos.x
 			cy = cy + v.pos.y
 			ownBallCount = ownBallCount + 1
+			table.insert(selfBalls,v)
 		end
 	end
 	if ownBallCount > 0 then
-		self.oldCentralPos.x = self.centralPos.x
-		self.oldCentralPos.y = self.centralPos.y
-		self.centralPos.x = cx/ownBallCount --(self.centralPos.x + cx) / 2
-		self.centralPos.y = cy/ownBallCount --(self.centralPos.y + cy) / 2
-		--if ownBallCount > 2 then
-		--	return
-		--end 
+		self.centralPos.x = cx/ownBallCount
+		self.centralPos.y = cy/ownBallCount
+		self:UpdateViewPort(selfBalls)
 		self:updateViewPortLeftBottom()
 	end
 end
@@ -189,21 +240,7 @@ function scene:Render()
 
     	if self:isInViewPort(topLeft) or self:isInViewPort(bottomLeft) or self:isInViewPort(topRight) or self:isInViewPort(bottomRight) then
     		local screenPos = self:viewPort2Screen(viewPortPos)
-    		--print(v.lastScreenPos,v.reqDir)
-    		--if v.lastScreenPos and v.reqDir then
-    		--	if v.lastScreenPos.x ~= screenPos.x or v.lastScreenPos.y ~= screenPos.y then
-    		--		print("here")
-    		--	end
-    			--local vv = util.vector2D.new(screenPos.x - v.lastScreenPos.x, screenPos.y - v.lastScreenPos.y)
-    			--cclog("%f,%f,%f,%f",screenPos.x,screenPos.y,v.lastScreenPos.x,v.lastScreenPos.y)
-    			--cclog("%d,%d",vv:getDirAngle(),v.reqDir)
-
-    			--if math.abs(vv:getDirAngle() - v.reqDir) > 100 then
-    			--	cclog("dir > 100 %d",math.abs(vv:getDirAngle() - v.reqDir))
-    			--end
-    		--end
     		self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
-    		--v.lastScreenPos = screenPos
     	end	
     end
 end
