@@ -289,7 +289,7 @@ M.msgHandler["BallUpdate"] = function(self,event)
 	for k,v in pairs(event.balls) do
 		local ball = self.balls[v.id]
 		if ball then
-			ball:OnBallUpdate(v,timestamp)
+			ball:OnBallUpdate(event,v,timestamp)
 		end
 	end
 end

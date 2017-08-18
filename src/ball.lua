@@ -79,7 +79,7 @@ function ball:Update(elapse)
 	end
 end
 
-function ball:OnBallUpdate(ballInfo,timestamp)
+function ball:OnBallUpdate(msg,ballInfo,timestamp)
 	self.velocitys = nil
 	
 	
@@ -88,26 +88,27 @@ function ball:OnBallUpdate(ballInfo,timestamp)
 	if math.abs(self.targetR - self.r) > 3 then
 		--改变超过3个像素需要渐变
 		self.rChange = (self.targetR - self.r)/60 
-	else
+	else	
 		self.r = self.targetR
 	end
 
-	self.r = ballInfo.r
-
-
-	if not ballInfo.elapse then
-		return
-	end
+	--self.r = ballInfo.r
+	--cclog("msg.elapse %d",msg.elapse)
 	local doSetPos --= true
 	if not doSetPos then
 		local delay = self.scene:GetServerTick() - timestamp
-		local elapse = ballInfo.elapse - delay
+		local elapse = msg.elapse - delay
 		if elapse <= 0 then
 			--延迟太严重无法平滑处理，直接拖拽
 			self.predictV = ballInfo.v
-			local v = util.vector2D.new(self.predictV.x , self.predictV.y)
-			self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
-			cclog("set pos tick:%d,delay:%d,ballInfo.elapse:%d,userID:%d,distance:%d,v:%d",self.scene:GetServerTick(),delay,ballInfo.elapse,self.userID,util.point2D.distance(self.pos,ballInfo.pos),v:mag())
+			if self.predictV then
+				local v = util.vector2D.new(self.predictV.x , self.predictV.y)
+				self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
+				self.usePredict = true
+			else
+				self.usePredict = false
+			end
+			cclog("set pos tick:%d,delay:%d,ballInfo.elapse:%d,userID:%d,distance:%d",self.scene:GetServerTick(),delay,msg.elapse,self.userID,util.point2D.distance(self.pos,ballInfo.pos))
 			self.pos.x = ballInfo.pos.x
 			self.pos.y = ballInfo.pos.y
 			return
@@ -118,10 +119,6 @@ function ball:OnBallUpdate(ballInfo,timestamp)
 		self.predictV = ballInfo.v
 		--计算速度
 		local v = util.vector2D.new(ballInfo.pos.x - self.pos.x, ballInfo.pos.y - self.pos.y)/(elapse/1000)
-
-		--if math.abs(ballInfo.reqDir - v:getDirAngle()) > 100 then
-		--	cclog("angle > 100 %d",self.scene:GetServerTick())
-		--end
 		self.v = util.velocity.new(v,nil,nil,elapse)
 	else
 		self.pos = ballInfo.pos
