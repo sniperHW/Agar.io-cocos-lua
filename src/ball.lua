@@ -13,6 +13,7 @@ function M.new(scene,userID,ballID,pos,color,r,velocitys)
 	o.pos = {x = pos.x,y = pos.y}
 	o.color = color
 	o.r = r
+	o.targetR = r
 	o.scene = scene
 	if velocitys and #velocitys > 0 then
 		o.velocitys = {}
@@ -37,7 +38,18 @@ function ball:UpdatePosition(averageV,elapse)
 	self.pos.y = util.min(topRight.y - R,self.pos.y)
 end
 
+function ball:UpdateR()
+	if self.targetR and self.r ~= self.targetR then
+		if math.abs(self.r - self.targetR) < math.abs(self.rChange) then
+			self.r = self.targetR
+		else
+			self.r = self.r + self.rChange
+		end
+	end
+end
+
 function ball:Update(elapse)
+	self:UpdateR()
 	if self.v then
 		if self.v.duration <= 0 then
 			if nil == self.predictV then
@@ -69,7 +81,15 @@ end
 
 function ball:OnBallUpdate(msg)
 	self.velocitys = nil
-	self.r = msg.r
+	self.targetR = msg.r
+
+	if math.abs(self.targetR - self.r) > 3 then
+		--改变超过3个像素需要渐变
+		self.rChange = (self.targetR - self.r)/5 
+	else
+		self.r = self.targetR
+	end
+
 
 	if not msg.elapse then
 		return

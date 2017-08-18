@@ -123,14 +123,14 @@ end
 
 function scene:UpdateTick()
 	local nowTick = net.GetSysTick()
-	if self.lastFixTime then
+	--[[if self.lastFixTime then
 		if nowTick - self.lastFixTime > 1000 then
 			local wpk = net.NewWPacket()
     		wpk:WriteTable({cmd="FixTime",clientTick=nowTick})
     		send2Server(wpk)
 			self.lastFixTime = nowTick
 		end
-	end
+	end]]
 	self.elapse = nowTick - self.lastTick	
 	self.gameTick = self.gameTick + self.elapse
 	self.lastTick = nowTick
@@ -160,7 +160,18 @@ end
 function scene:Render()
     self.drawer:clear()
     star.Render(self)
+
+    local balls = {}
     for k,v in pairs(self.balls) do
+    	table.insert(balls,v)
+    end
+
+    --按score从小到大排序
+    table.sort(balls,function (a,b)
+    	return a.r < b.r
+    end)
+
+    for k,v in pairs(balls) do
     	local viewPortPos = self:world2ViewPort(v.pos)
 
     	local topLeft = {x = viewPortPos.x - v.r , y = viewPortPos.y + v.r}
