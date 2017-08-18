@@ -79,41 +79,54 @@ function ball:Update(elapse)
 	end
 end
 
-function ball:OnBallUpdate(msg)
+function ball:OnBallUpdate(ballInfo,timestamp)
 	self.velocitys = nil
-	self.targetR = msg.r
+	
+	
+	self.targetR = ballInfo.r
 
 	if math.abs(self.targetR - self.r) > 3 then
 		--改变超过3个像素需要渐变
-		self.rChange = (self.targetR - self.r)/5 
+		self.rChange = (self.targetR - self.r)/60 
 	else
 		self.r = self.targetR
 	end
 
+	self.r = ballInfo.r
 
-	if not msg.elapse then
+
+	if not ballInfo.elapse then
 		return
 	end
+	local doSetPos --= true
+	if not doSetPos then
+		local delay = self.scene:GetServerTick() - timestamp
+		local elapse = ballInfo.elapse - delay
+		if elapse <= 0 then
+			--延迟太严重无法平滑处理，直接拖拽
+			self.predictV = ballInfo.v
+			local v = util.vector2D.new(self.predictV.x , self.predictV.y)
+			self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
+			cclog("set pos tick:%d,delay:%d,ballInfo.elapse:%d,userID:%d,distance:%d,v:%d",self.scene:GetServerTick(),delay,ballInfo.elapse,self.userID,util.point2D.distance(self.pos,ballInfo.pos),v:mag())
+			self.pos.x = ballInfo.pos.x
+			self.pos.y = ballInfo.pos.y
+			return
+		end
+			
 
-	local delay = self.scene:GetServerTick() - msg.timestamp
-	local elapse = msg.elapse - delay
-	if elapse <= 0 then
-		--延迟太严重无法平滑处理，直接拖拽
-		self.predictV = msg.v
-		local v = util.vector2D.new(self.predictV.x , self.predictV.y)
-		self.v = util.velocity.new(util.vector2D.new(self.predictV.x , self.predictV.y))
-		cclog("set pos tick:%d,delay:%d,msg.elapse:%d,userID:%d,distance:%d,v:%d",self.scene:GetServerTick(),delay,msg.elapse,self.userID,util.point2D.distance(self.pos,msg.pos),v:mag())
-		self.pos.x = msg.pos.x
-		self.pos.y = msg.pos.y
-		return
+		self.usePredict = false
+		self.predictV = ballInfo.v
+		--计算速度
+		local v = util.vector2D.new(ballInfo.pos.x - self.pos.x, ballInfo.pos.y - self.pos.y)/(elapse/1000)
+
+		--if math.abs(ballInfo.reqDir - v:getDirAngle()) > 100 then
+		--	cclog("angle > 100 %d",self.scene:GetServerTick())
+		--end
+		self.v = util.velocity.new(v,nil,nil,elapse)
+	else
+		self.pos = ballInfo.pos
+		self.reqDir = ballInfo.reqDir
 	end
-	--local elapse = msg.elapse	
-
-	self.usePredict = false
-	self.predictV = msg.v
-	--计算速度
-	local v = util.vector2D.new(msg.pos.x - self.pos.x, msg.pos.y - self.pos.y)/(elapse/1000)
-	self.v = util.velocity.new(v,nil,nil,elapse)
 end
 
 return M

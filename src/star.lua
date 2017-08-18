@@ -38,8 +38,11 @@ function M.OnStars(event)
 
 end
 
-function M.OnStarDead(event)
-	M.stars[event.id] = nil
+function M.OnStarDead(event)	
+	for k,v in pairs(event.stars) do
+		M.stars[v] = nil
+	end
+	--M.stars[event.id] = nil
 end
 
 function M.OnStarRelive(event)

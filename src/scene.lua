@@ -2,6 +2,7 @@ local net = require("net")
 local ball = require("ball")
 local config = require("config")
 local star = require("star")
+local util = require("util")
 local M = {}
 
 local scene = {}
@@ -73,6 +74,7 @@ end
 
 --根据ball的坐标,更新屏幕左下角在世界坐标的位置
 function scene:updateViewPortLeftBottom()
+
 	local leftBottom = {}
 	leftBottom.x = self.centralPos.x - self.viewPort.width/2
 	leftBottom.y = self.centralPos.y - self.viewPort.height/2
@@ -116,6 +118,7 @@ function scene:Init(drawer)
     self.balls = {}
     self.delayMsgQue = {}
     self.centralPos = {x = M.width/2, y = M.height/2 }
+    self.oldCentralPos = {x = M.width/2, y = M.height/2 }
     self:setViewPort(M.visibleSize.width,M.visibleSize.height)    
     self:updateViewPortLeftBottom()
 	return self
@@ -151,8 +154,13 @@ function scene:Update()
 		end
 	end
 	if ownBallCount > 0 then
+		self.oldCentralPos.x = self.centralPos.x
+		self.oldCentralPos.y = self.centralPos.y
 		self.centralPos.x = cx/ownBallCount --(self.centralPos.x + cx) / 2
 		self.centralPos.y = cy/ownBallCount --(self.centralPos.y + cy) / 2
+		--if ownBallCount > 2 then
+		--	return
+		--end 
 		self:updateViewPortLeftBottom()
 	end
 end
@@ -181,7 +189,21 @@ function scene:Render()
 
     	if self:isInViewPort(topLeft) or self:isInViewPort(bottomLeft) or self:isInViewPort(topRight) or self:isInViewPort(bottomRight) then
     		local screenPos = self:viewPort2Screen(viewPortPos)
+    		--print(v.lastScreenPos,v.reqDir)
+    		--if v.lastScreenPos and v.reqDir then
+    		--	if v.lastScreenPos.x ~= screenPos.x or v.lastScreenPos.y ~= screenPos.y then
+    		--		print("here")
+    		--	end
+    			--local vv = util.vector2D.new(screenPos.x - v.lastScreenPos.x, screenPos.y - v.lastScreenPos.y)
+    			--cclog("%f,%f,%f,%f",screenPos.x,screenPos.y,v.lastScreenPos.x,v.lastScreenPos.y)
+    			--cclog("%d,%d",vv:getDirAngle(),v.reqDir)
+
+    			--if math.abs(vv:getDirAngle() - v.reqDir) > 100 then
+    			--	cclog("dir > 100 %d",math.abs(vv:getDirAngle() - v.reqDir))
+    			--end
+    		--end
     		self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
+    		--v.lastScreenPos = screenPos
     	end	
     end
 end
@@ -198,9 +220,7 @@ end
 
 M.msgHandler["FixTime"] = function (self,event)
 	local nowTick = net.GetSysTick()
-	local elapse = nowTick - self.lastTick
-	--cclog("FixTime %d %d %d",elapse , nowTick - event.clientTick , event.clientTick)	 
-	--print(event.serverTick - self.gameTick)	
+	local elapse = nowTick - self.lastTick	
 	self.gameTick = event.serverTick - elapse
 	self.lastFixTime = nowTick
 end
@@ -213,9 +233,7 @@ M.msgHandler["ServerTick"] = function (self,event)
 end
 
 M.msgHandler["BeginSee"] = function (self,event)
-	--cclog("localServerTick %d,event.timestamp %d",self:GetServerTick(),event.timestamp)
 	for k,v in pairs(event.balls) do
-		--cclog("BeginSee ballID:%d,pos(%d,%d)",v.id,v.pos.x,v.pos.y)
 		local color = config.colors[v.color]
 		color = cc.c4f(color[1],color[2],color[3],color[4])
 		local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r,v.velocitys)
@@ -224,21 +242,19 @@ M.msgHandler["BeginSee"] = function (self,event)
 end
 
 M.msgHandler["EndSee"] = function (self,event)
-	cclog("endsee %d",event.id)
-	self.balls[event.id] = nil	
-	--cclog("localServerTick %d,event.timestamp %d",self:GetServerTick(),event.timestamp)
-	--for k,v in pairs(event.balls) do
-		--cclog("BeginSee ballID:%d,pos(%d,%d)",v.id,v.pos.x,v.pos.y)
-	--	local color = config.colors[v.color]
-	--	color = cc.c4f(color[1],color[2],color[3],color[4])
-	--	local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r,v.velocitys)
-	--	self.balls[newBall.id] = newBall
-	--end
+	for k,v in pairs(event.balls) do
+		self.balls[v] = nil
+	end	
 end
 
 M.msgHandler["BallUpdate"] = function(self,event)
-	local ball = self.balls[event.id]
-	ball:OnBallUpdate(event)
+	local timestamp = event.timestamp
+	for k,v in pairs(event.balls) do
+		local ball = self.balls[v.id]
+		if ball then
+			ball:OnBallUpdate(v,timestamp)
+		end
+	end
 end
 
 M.msgHandler["EnterRoom"] = function(self,event)
@@ -260,7 +276,6 @@ function scene:processDelayMsg()
 		local msg = self.delayMsgQue[1]
 		if msg.timestamp <= tick then
 			table.remove(self.delayMsgQue,1)
-			--cclog("processDelayMsg:%s",msg.cmd)
 			local handler = M.msgHandler[msg.cmd]
 			if handler then
 				handler(self,msg)
@@ -277,13 +292,11 @@ function scene:DispatchEvent(event)
 	if event.timestamp then
 		--将消息延时M.delayTick处理
 		local nowTick = net.GetSysTick()
-		local elapse = nowTick - self.lastTick
-		--cclog("msg delay:%d,elapse:%d",self:GetServerTick() - event.timestamp + elapse,elapse)		 
+		local elapse = nowTick - self.lastTick		 
 		event.timestamp = event.timestamp + M.delayTick - elapse
 		table.insert(self.delayMsgQue,event)
 		return
 	end
-	--cclog("DispatchEvent:%s",cmd)
 	local handler = M.msgHandler[cmd]
 	if handler then
 		handler(self,event)
