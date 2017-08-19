@@ -81,17 +81,14 @@ end
 
 function ball:OnBallUpdate(msg,ballInfo,timestamp)
 	self.velocitys = nil
-	
-	
 	self.targetR = ballInfo.r
 
 	if math.abs(self.targetR - self.r) > 3 then
 		--改变超过3个像素需要渐变
-		self.rChange = (self.targetR - self.r)/60 
+		self.rChange = (self.targetR - self.r)/10 
 	else	
 		self.r = self.targetR
 	end
-
 	local doSetPos --= true
 	if not doSetPos then
 		local delay = self.scene:GetServerTick() - timestamp

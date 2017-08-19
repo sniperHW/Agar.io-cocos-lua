@@ -43,6 +43,8 @@ local function initGLView()
     director:setAnimationInterval(1.0 / 60)
 end
 
+showGameOver = nil
+
 local function main()
     -- avoid memory leak
     collectgarbage("setpause", 100)
@@ -51,7 +53,6 @@ local function main()
     local Scene = require("scene")
     local visibleSize = cc.Director:getInstance():getVisibleSize()
     local origin = cc.Director:getInstance():getVisibleOrigin()
-    local scene
 
     cclog("origin(%d, %d) visibleSize(%d, %d)", origin.x, origin.y, visibleSize.width, visibleSize.height)
 
@@ -61,7 +62,7 @@ local function main()
         math.randomseed(os.time())
         local draw = cc.DrawNode:create()
         layerFarm:addChild(draw, 10)
-        scene = Scene.New():Init(draw)
+        local scene = Scene.New():Init(draw)
 
         net.Connect(--[["139.224.59.83"]]"127.0.0.1",9100,function (s,success)
             if success then 
@@ -83,14 +84,19 @@ local function main()
                 net.Send(s,wpk)
             end
         end)
-
+        local entryID
         function tick()
+
             scene:UpdateTick()
             net.Run(0)
+            if scene.gameOver then
+                cc.Director:getInstance():getScheduler():unscheduleScriptEntry(entryID)
+                return
+            end
             scene:Update()
             scene:Render()
         end
-        cc.Director:getInstance():getScheduler():scheduleScriptFunc(tick, 1/60, false)   
+        entryID = cc.Director:getInstance():getScheduler():scheduleScriptFunc(tick, 1/60, false)   
         return layerFarm
     end
 
@@ -226,7 +232,13 @@ local function main()
     sceneGame:addChild(createJoyStick()) 
     sceneGame:addChild(createLayerMenu())   
     cc.Director:getInstance():runWithScene(sceneGame)
-
+    showGameOver = function ()
+        local label = cc.Label:createWithTTF("", "fonts/Marker Felt.ttf", 120)
+        label:setAnchorPoint(cc.p(0.5, 0.5))
+        label:setPosition(cc.p(origin.x + visibleSize.width/2,origin.y + visibleSize.height/2))
+        label:setString("GameOver")
+        sceneGame:addChild(label)
+    end    
 end
 
 xpcall(main, __G__TRACKBACK__)

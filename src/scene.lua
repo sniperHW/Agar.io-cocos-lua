@@ -190,6 +190,7 @@ function scene:UpdateViewPort(selfBalls)
 		end
 
 	end
+	
 end
 
 function scene:Update()
@@ -271,7 +272,12 @@ end
 
 M.msgHandler["BeginSee"] = function (self,event)
 	for k,v in pairs(event.balls) do
-		local color = config.colors[v.color]
+		local color
+		if v.color == config.thornColorID then
+			color = config.thornColor
+		else 
+			color = config.colors[v.color]
+		end
 		color = cc.c4f(color[1],color[2],color[3],color[4])
 		local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r,v.velocitys)
 		self.balls[newBall.id] = newBall
@@ -290,6 +296,8 @@ M.msgHandler["BallUpdate"] = function(self,event)
 		local ball = self.balls[v.id]
 		if ball then
 			ball:OnBallUpdate(event,v,timestamp)
+		else
+			cclog("ball unfind:%d",v.id)
 		end
 	end
 end
@@ -305,6 +313,11 @@ end
 
 M.msgHandler["StarRelive"] = function(self,event)
 	star.OnStarRelive(event)
+end
+
+M.msgHandler["GameOver"] = function(self,event)
+	self.gameOver = true
+	showGameOver()
 end
 
 function scene:processDelayMsg()
