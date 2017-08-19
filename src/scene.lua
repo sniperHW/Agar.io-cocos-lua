@@ -215,6 +215,13 @@ function scene:Update()
 		self:UpdateViewPort(selfBalls)
 		self:updateViewPortLeftBottom()
 	end
+
+	local secRemain = max(0,math.floor(config.gameTime - self.gameTick/1000))
+	local min = secRemain/60
+	local sec = secRemain%60
+	local timeStr = string.format("%d:%.2d",min,sec)
+	UpdateTime(timeStr)
+
 end
 
 function scene:Render()

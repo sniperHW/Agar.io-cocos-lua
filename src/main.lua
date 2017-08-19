@@ -238,7 +238,16 @@ local function main()
         label:setPosition(cc.p(origin.x + visibleSize.width/2,origin.y + visibleSize.height/2))
         label:setString("GameOver")
         sceneGame:addChild(label)
-    end    
+    end 
+
+    local labelTime = cc.Label:createWithTTF("", "fonts/Marker Felt.ttf", 20)
+    labelTime:setAnchorPoint(cc.p(0.5, 0.5))
+    labelTime:setPosition(cc.p(origin.x + visibleSize.width/2,origin.y + 600))
+    labelTime:setString("0")
+    sceneGame:addChild(labelTime)
+    function UpdateTime(timeStr)
+        labelTime:setString(timeStr)
+    end
 end
 
 xpcall(main, __G__TRACKBACK__)
