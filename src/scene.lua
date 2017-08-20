@@ -216,7 +216,7 @@ function scene:Update()
 		self:updateViewPortLeftBottom()
 	end
 
-	local secRemain = max(0,math.floor(config.gameTime - self.gameTick/1000))
+	local secRemain = math.max(0,math.floor(config.gameTime - self.gameTick/1000))
 	local min = secRemain/60
 	local sec = secRemain%60
 	local timeStr = string.format("%d:%.2d",min,sec)
@@ -248,7 +248,11 @@ function scene:Render()
 
     	if self:isInViewPort(topLeft) or self:isInViewPort(bottomLeft) or self:isInViewPort(topRight) or self:isInViewPort(bottomRight) then
     		local screenPos = self:viewPort2Screen(viewPortPos)
-    		self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
+    		if v.thorn then
+ 				self.drawer:drawCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, false, 1.0, 1.0, v.color)
+    		else
+    			self.drawer:drawSolidCircle(cc.p(screenPos.x ,screenPos.y), v.r * self.scaleFactor, math.pi/2, 50, 1.0, 1.0, v.color)
+    		end
     	end	
     end
 end
@@ -280,13 +284,16 @@ end
 M.msgHandler["BeginSee"] = function (self,event)
 	for k,v in pairs(event.balls) do
 		local color
+		local thorn
 		if v.color == config.thornColorID then
 			color = config.thornColor
+			thorn = true
 		else 
 			color = config.colors[v.color]
 		end
 		color = cc.c4f(color[1],color[2],color[3],color[4])
 		local newBall = ball.new(self,v.userID,v.id,v.pos,color,v.r,v.velocitys)
+		newBall.thorn = thorn
 		self.balls[newBall.id] = newBall
 	end
 end
