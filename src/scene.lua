@@ -106,7 +106,6 @@ function scene:setViewPort(width,height)
     self.viewPort.width = width
     self.viewPort.height = height
     self.scaleFactor = M.visibleSize.width/self.viewPort.width
-    --cclog("scaleFactor:%f",self.scaleFactor)
 end
 
 function scene:Init(drawer)
@@ -126,14 +125,6 @@ end
 
 function scene:UpdateTick()
 	local nowTick = net.GetSysTick()
-	--[[if self.lastFixTime then
-		if nowTick - self.lastFixTime > 1000 then
-			local wpk = net.NewWPacket()
-    		wpk:WriteTable({cmd="FixTime",clientTick=nowTick})
-    		send2Server(wpk)
-			self.lastFixTime = nowTick
-		end
-	end]]
 	self.elapse = nowTick - self.lastTick	
 	self.gameTick = self.gameTick + self.elapse
 	self.lastTick = nowTick
@@ -167,11 +158,9 @@ function scene:UpdateViewPort(selfBalls)
 			maxDeltaY = math.max(deltaY , maxDeltaY)
 		end
 
-		--cclog("maxDeltaX %d,maxDeltaY %d",maxDeltaX,maxDeltaY)
-
 		if maxDeltaX/M.visibleSize.width > maxDeltaY/M.visibleSize.height then
-			if maxDeltaX > M.visibleSize.width/5 then
-				local viewPortWidth = self.viewPort.width/2 + maxDeltaX + 300
+			if maxDeltaX > M.visibleSize.width/4 then
+				local viewPortWidth = self.viewPort.width/2 + maxDeltaX + 200
 				viewPortWidth = math.min(viewPortWidth,config.mapWidth)
 				local viewPortHeight = math.floor((M.visibleSize.height * viewPortWidth)/M.visibleSize.width)
 				self:setViewPort(viewPortWidth,viewPortHeight)			
@@ -179,8 +168,8 @@ function scene:UpdateViewPort(selfBalls)
 				self:setViewPort(M.visibleSize.width,M.visibleSize.height)
 			end
 		else
-			if maxDeltaY > M.visibleSize.height/5 then
-				local viewPortHeight = self.viewPort.height/2 + maxDeltaY + 300
+			if maxDeltaY > M.visibleSize.height/4 then
+				local viewPortHeight = self.viewPort.height/2 + maxDeltaY + 200
 				viewPortHeight = math.min(viewPortHeight,config.mapWidth)
 				local viewPortWidth = math.floor((M.visibleSize.width * viewPortHeight)/M.visibleSize.height)
 				self:setViewPort(viewPortWidth,viewPortHeight)			
