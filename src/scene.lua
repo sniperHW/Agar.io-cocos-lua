@@ -135,50 +135,55 @@ function scene:UpdateViewPort(selfBalls)
 		return
 	end
 
-	if #selfBalls == 1 then
-		local baseR = config.Score2R(config.initScore)
-		local R = config.Score2R(selfBalls[1].r)
-		if R == baseR then
-			self:setViewPort(M.visibleSize.width,M.visibleSize.height)
-		else
-			local viewPortWidth =  math.floor((1+(R/baseR)/10) * M.visibleSize.width)
-			viewPortWidth = math.min(viewPortWidth,config.mapWidth)
-			local viewPortHeight = math.floor((M.visibleSize.height * viewPortWidth)/M.visibleSize.width)
-			self:setViewPort(viewPortWidth,viewPortHeight)
-		end
-	else
-		local maxDeltaX = 0
-		local maxDeltaY = 0
-		for k,v in pairs(selfBalls) do
-			local vv = util.vector2D.new(v.pos.x - self.centralPos.x , v.pos.y - self.centralPos.y)
-			local p = util.point2D.moveto(v.pos,vv:getDirAngle(),v.r)
-			local deltaX = math.abs(p.x - self.centralPos.x)
-			local deltaY = math.abs(p.y - self.centralPos.y)
-			maxDeltaX = math.max(deltaX , maxDeltaX)
-			maxDeltaY = math.max(deltaY , maxDeltaY)
+    local _edgeMaxX = 0
+    local _edgeMaxY = 0
+    local _edgeMinX = 1000000
+    local _edgeMinY = 1000000
+
+	for k,v in pairs(selfBalls) do
+		local R = math.floor(config.Score2R(v.r))
+		local bottomLeft = {x = v.pos.x - R,y = v.pos.y - R}
+		local topRight = {x = v.pos.x + R,y = v.pos.y + R}
+
+		if _edgeMaxX < topRight.x then
+			_edgeMaxX = topRight.x
 		end
 
-		if maxDeltaX/M.visibleSize.width > maxDeltaY/M.visibleSize.height then
-			if maxDeltaX > M.visibleSize.width/4 then
-				local viewPortWidth = self.viewPort.width/2 + maxDeltaX + 200
-				viewPortWidth = math.min(viewPortWidth,config.mapWidth)
-				local viewPortHeight = math.floor((M.visibleSize.height * viewPortWidth)/M.visibleSize.width)
-				self:setViewPort(viewPortWidth,viewPortHeight)			
-			else
-				self:setViewPort(M.visibleSize.width,M.visibleSize.height)
-			end
-		else
-			if maxDeltaY > M.visibleSize.height/4 then
-				local viewPortHeight = self.viewPort.height/2 + maxDeltaY + 200
-				viewPortHeight = math.min(viewPortHeight,config.mapWidth)
-				local viewPortWidth = math.floor((M.visibleSize.width * viewPortHeight)/M.visibleSize.height)
-				self:setViewPort(viewPortWidth,viewPortHeight)			
-			else
-				self:setViewPort(M.visibleSize.width,M.visibleSize.height)
-			end
+		if _edgeMaxY < topRight.y then
+			_edgeMaxY = topRight.y
+		end
+
+		if _edgeMinX > bottomLeft.x then
+			_edgeMinX = bottomLeft.x
+		end
+
+		if _edgeMinY > bottomLeft.y then
+			_edgeMinY = bottomLeft.y
 		end
 
 	end
+
+    local width = _edgeMaxX - _edgeMinX
+    local height = _edgeMaxY - _edgeMinY
+
+    local para = 30
+    local r = math.max(width,height)
+    r = (r * 0.5) / para
+
+    local a1 = 8 / math.sqrt(r)
+    local a2 = math.max(a1,1.5)
+    local a3 = r * a2
+    local a4 = math.max(a3,10)
+    local a5 = math.min(a4,100)
+    local scale = a5 * para
+
+    scale = scale / (M.visibleSize.height / 2)
+
+
+    local _visionWidth = math.floor(M.visibleSize.width * scale)
+    local _visionHeight = math.floor(M.visibleSize.height * scale)
+
+    self:setViewPort(_visionWidth,_visionHeight)
 	
 end
 
